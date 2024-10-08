@@ -39,7 +39,7 @@ async def get_novel_text_list(sha256):
         return None
 
 # 定义EPUB翻译逻辑控制函数
-async def process_control(sha256, session, server, i, system_prompt, preset_prompt, paragraph, model, temperature, top_p, repeat_penalty, max_retry_count, total_completion_tokens, retry_count=0):
+async def process_control(sha256, session, server, i, system_prompt, preset_prompt, paragraph, model, temperature, top_p, frequency_penalty, max_retry_count, total_completion_tokens, retry_count=0):
     try:
         newline_counts = paragraph[0]
         paragraph = paragraph[1]
@@ -50,7 +50,7 @@ async def process_control(sha256, session, server, i, system_prompt, preset_prom
         original_lines = [line for line in original_lines if line.strip() != '']
 
         while retry_count < max_retry_count:
-            translated_paragraph, completion_tokens = await UnifiedRequest.translate_paragraph_request(session, server, system_prompt, preset_prompt, paragraph, model, temperature, top_p, repeat_penalty, max_retry_count, total_completion_tokens)
+            translated_paragraph, completion_tokens = await UnifiedRequest.translate_paragraph_request(session, server, system_prompt, preset_prompt, paragraph, model, temperature, top_p, frequency_penalty, max_retry_count, total_completion_tokens)
             if translated_paragraph is None:
                 return None
             
@@ -73,7 +73,7 @@ async def process_control(sha256, session, server, i, system_prompt, preset_prom
         # 逐行翻译
         logging.error(f"尝试{retry_count+1}次后原文和译文行数仍然不一致，原文行数：{len(original_lines)}，译文行数：{len(translated_lines)}\n原文：{paragraph}\n译文：{translated_paragraph}")
         logging.error(f"尝试逐行翻译")
-        translated_paragraph, completion_tokens = await UnifiedRequest.translate_line_request(session, server, system_prompt, preset_prompt, paragraph, model, temperature, top_p, repeat_penalty, max_retry_count, total_completion_tokens)
+        translated_paragraph, completion_tokens = await UnifiedRequest.translate_line_request(session, server, system_prompt, preset_prompt, paragraph, model, temperature, top_p, frequency_penalty, max_retry_count, total_completion_tokens)
         if translated_paragraph is None:
             return None
         # 比较原文和译文行数
@@ -93,9 +93,9 @@ async def process_control(sha256, session, server, i, system_prompt, preset_prom
         return None
 
 # 定义并发量控制函数
-async def bound_fetch(sha256, semaphore, session, server, i, system_prompt, preset_prompt, paragraph, model, temperature, top_p, repeat_penalty, max_retry_count, total_completion_tokens):
+async def bound_fetch(sha256, semaphore, session, server, i, system_prompt, preset_prompt, paragraph, model, temperature, top_p, frequency_penalty, max_retry_count, total_completion_tokens):
     async with semaphore:
-        return await process_control(sha256, session, server, i, system_prompt, preset_prompt, paragraph, model, temperature, top_p, repeat_penalty, max_retry_count, total_completion_tokens)
+        return await process_control(sha256, session, server, i, system_prompt, preset_prompt, paragraph, model, temperature, top_p, frequency_penalty, max_retry_count, total_completion_tokens)
 
 # 定义EPUB翻译后文本整合函数
 def integration(sha256):
@@ -163,14 +163,14 @@ def integration(sha256):
         logging.error(f"EPUB错误：翻译后整合出错: {e}")
 
 # 获取翻译后的保存路径
-async def get_translated_save_path(sha256, session, server, system_prompt, preset_prompt, model, temperature, top_p, repeat_penalty, max_retry_count, total_completion_tokens = 0):
+async def get_translated_save_path(sha256, session, server, system_prompt, preset_prompt, model, temperature, top_p, frequency_penalty, max_retry_count, total_completion_tokens = 0):
     try:
         with open(os.path.join(".\Cache\EPUB", sha256, "epub_book_path.pkl"), "rb") as f:
             epub_book_path = pickle.load(f)
         base_name = os.path.basename(epub_book_path)
         title = base_name[:-5]
         # 调用段落翻译用于标题翻译
-        translated_title, completion_tokens = await UnifiedRequest.translate_paragraph_request(session, server, system_prompt, preset_prompt, title, model, temperature, top_p, repeat_penalty, max_retry_count, total_completion_tokens)
+        translated_title, completion_tokens = await UnifiedRequest.translate_paragraph_request(session, server, system_prompt, preset_prompt, title, model, temperature, top_p, frequency_penalty, max_retry_count, total_completion_tokens)
         if translated_title is None:
             return None
         
@@ -194,7 +194,7 @@ async def translation(sha256, config):
         model = config['model']
         temperature = config['temperature']
         top_p = config['top_p']
-        repeat_penalty = config['repeat_penalty']
+        frequency_penalty = config['frequency_penalty']
         max_retry_count = config['max_retry_count']
         Concurrent_quantity = config['Concurrent_quantity']
         # 创建异步锁
@@ -221,7 +221,7 @@ async def translation(sha256, config):
             if os.path.exists(os.path.join(".\Cache\EPUB", sha256, "translated_save_path.pkl")):
                 completion_token = 0
             else:
-                completion_token = await get_translated_save_path(sha256, session, server, system_prompt, preset_prompt, model, temperature, top_p, repeat_penalty, max_retry_count)
+                completion_token = await get_translated_save_path(sha256, session, server, system_prompt, preset_prompt, model, temperature, top_p, frequency_penalty, max_retry_count)
             
             for i, paragraph in epub_texts:
                 if len(dict_data) > 0:
@@ -258,7 +258,7 @@ async def translation(sha256, config):
 
                 logging.debug(f"EPUB翻译提示词：{preset_prompt}")
 
-                task = asyncio.ensure_future(bound_fetch(sha256, semaphore, session, server, i, system_prompt, preset_prompt, paragraph, model, temperature, top_p, repeat_penalty, max_retry_count, total_completion_tokens = 0))
+                task = asyncio.ensure_future(bound_fetch(sha256, semaphore, session, server, i, system_prompt, preset_prompt, paragraph, model, temperature, top_p, frequency_penalty, max_retry_count, total_completion_tokens = 0))
                 tasks.append(task)
             results = await asyncio.gather(*tasks)
             for result in results:

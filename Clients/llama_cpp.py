@@ -3,7 +3,7 @@ import asyncio
 from Clients.Timeout import TIMEOUT
 
 # 定义统一的段落异步翻译请求函数
-async def translate_paragraph_request(session, system_prompt, preset_prompt, context, model, temperature, top_p, repeat_penalty, max_retry_count, completion_tokens, retry_count=0):
+async def translate_paragraph_request(session, system_prompt, preset_prompt, context, model, temperature, top_p, frequency_penalty, max_retry_count, completion_tokens, retry_count=0):
     try:
         # 构建请求体
         prompt = preset_prompt + context
@@ -16,7 +16,7 @@ async def translate_paragraph_request(session, system_prompt, preset_prompt, con
             "stream": False,
             "temperature": temperature,
             "top_p": top_p,
-            "repeat_penalty": repeat_penalty
+            "frequency_penalty": frequency_penalty
         }
         # 发送请求
         async with session.post("http://localhost:8080/v1/chat/completions", json=data, timeout=TIMEOUT) as response:
@@ -35,7 +35,7 @@ async def translate_paragraph_request(session, system_prompt, preset_prompt, con
                 if retry_count <= max_retry_count:
                     logging.info(f"重试第 {retry_count + 1} 次")
                     await asyncio.sleep(1) # 等待1秒后重试
-                    return await translate_paragraph_request(session, system_prompt, preset_prompt, context, model, temperature, top_p, repeat_penalty, max_retry_count, completion_tokens, retry_count + 1)
+                    return await translate_paragraph_request(session, system_prompt, preset_prompt, context, model, temperature, top_p, frequency_penalty, max_retry_count, completion_tokens, retry_count + 1)
                 else:
                     logging.error(f"重试次数已用尽，请求失败")
                     return None, None
@@ -44,13 +44,13 @@ async def translate_paragraph_request(session, system_prompt, preset_prompt, con
         return None, None
 
 # 定义统一的逐行翻译请求函数
-async def translate_line_request(session, system_prompt, preset_prompt, context, model, temperature, top_p, repeat_penalty, max_retry_count, total_completion_tokens):
+async def translate_line_request(session, system_prompt, preset_prompt, context, model, temperature, top_p, frequency_penalty, max_retry_count, total_completion_tokens):
     try:
         context = context.split('\n')
         translated_lines = []
         for line in context:
             # 调用段落翻译函数
-            translated_line, total_completion_tokens = await translate_paragraph_request(session, system_prompt, preset_prompt, line, model, temperature, top_p, repeat_penalty, max_retry_count, total_completion_tokens)
+            translated_line, total_completion_tokens = await translate_paragraph_request(session, system_prompt, preset_prompt, line, model, temperature, top_p, frequency_penalty, max_retry_count, total_completion_tokens)
             if translated_line is None:
                 return None, None
             translated_lines.append(translated_line)

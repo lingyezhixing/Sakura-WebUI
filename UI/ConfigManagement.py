@@ -31,7 +31,7 @@ def add_config():
                     "preset_prompt": "根据以下术语表（可以为空）：\n{DICT}\n\n将下面的日文文本根据上述术语表的对应关系和备注翻译成中文：",
                     "temperature": 0.2,
                     "top_p": 0.8,
-                    "repeat_penalty": 1.1,
+                    "frequency_penalty": 0.0,
                     "max_retry_count": 3,
                     "Concurrent_quantity": 12
                 }
@@ -122,14 +122,14 @@ def config_management():
                     help='模型参数之一，控制输出的多样性',
                     key=default_config + '_top_p'
                     )
-                repeat_penalty = st.slider(
-                    'repeat_penalty',
+                frequency_penalty = st.slider(
+                    'frequency_penalty',
                     min_value=0.0,
                     max_value=2.0,
                     step=0.1,
-                    value=config_dict[default_config].get('repeat_penalty'),
+                    value=config_dict[default_config].get('frequency_penalty'),
                     help='模型参数之一，控制重复输出的惩罚',
-                    key=default_config + '_repeat_penalty'
+                    key=default_config + '_frequency_penalty'
                     )
                 max_retry_count = st.slider(
                     'max_retry_count',
@@ -161,7 +161,7 @@ def config_management():
                                 'preset_prompt': preset_prompt,
                                 'temperature': temperature,
                                 'top_p': top_p,
-                                'repeat_penalty': repeat_penalty,
+                                'frequency_penalty': frequency_penalty,
                                 'max_retry_count': max_retry_count,
                                 'Concurrent_quantity': Concurrent_quantity
                             }
@@ -248,14 +248,14 @@ def config_management():
                         help='模型参数之一，控制输出的多样性',
                         key=config_name + '_top_p'
                         )
-                    repeat_penalty = st.slider(
-                        'repeat_penalty',
+                    frequency_penalty = st.slider(
+                        'frequency_penalty',
                         min_value=0.0,
                         max_value=2.0,
                         step=0.1,
-                        value=config_dict[config_name].get('repeat_penalty'),
+                        value=config_dict[config_name].get('frequency_penalty'),
                         help='模型参数之一，控制重复输出的惩罚',
-                        key=config_name + '_repeat_penalty'
+                        key=config_name + '_frequency_penalty'
                         )
                     max_retry_count = st.slider(
                         'max_retry_count',
@@ -287,7 +287,7 @@ def config_management():
                                 'preset_prompt': preset_prompt,
                                 'temperature': temperature,
                                 'top_p': top_p,
-                                'repeat_penalty': repeat_penalty,
+                                'frequency_penalty': frequency_penalty,
                                 'max_retry_count': max_retry_count,
                                 'Concurrent_quantity': Concurrent_quantity
                             }
